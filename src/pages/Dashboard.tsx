@@ -1,12 +1,12 @@
 
 import React, { useEffect, useState } from "react";
-import { Mic, Plus } from "lucide-react"; 
+import { Plus } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import { databaseService } from "@/services/DatabaseService";
 import { Category } from "@/models/Category";
 import { Expense } from "@/models/Expense";
 import { Settings } from "@/models/Settings";
-import { voiceRecognitionService } from "@/services/VoiceRecognitionService";
+import VoiceButton from "@/components/layout/VoiceButton";
 import AddExpenseDialog from "@/components/expenses/AddExpenseDialog";
 import MonthlyOverview from "@/components/dashboard/MonthlyOverview";
 import CategoryChart from "@/components/dashboard/CategoryChart";
@@ -18,7 +18,6 @@ const Dashboard = () => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [monthlyTotal, setMonthlyTotal] = useState(0);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   
   // Function to load all data
   const loadData = async () => {
@@ -44,36 +43,19 @@ const Dashboard = () => {
     loadData();
   }, []);
 
-  // Handle voice recognition
-  const handleVoiceRecognition = async () => {
-    if (isRecording) {
-      voiceRecognitionService.stopListening();
-      setIsRecording(false);
-      return;
-    }
-
-    setIsRecording(true);
-    try {
-      await voiceRecognitionService.startListening();
-      
-      // Automatically stop after 5 seconds
-      setTimeout(() => {
-        if (isRecording) {
-          voiceRecognitionService.stopListening();
-          setIsRecording(false);
-        }
-      }, 5000);
-
-      // Reload data after voice recognition
-      setTimeout(() => {
-        loadData();
-      }, 1000);
-    } catch (error) {
-      console.error("Error during voice recognition:", error);
-    } finally {
-      setIsRecording(false);
-    }
-  };
+  // Configurar un evento personalizado para recargar datos cuando se completa el reconocimiento de voz
+  useEffect(() => {
+    const handleVoiceRecognitionComplete = () => {
+      console.log("Reloading data after voice recognition");
+      loadData();
+    };
+    
+    window.addEventListener('voiceRecognitionComplete', handleVoiceRecognitionComplete);
+    
+    return () => {
+      window.removeEventListener('voiceRecognitionComplete', handleVoiceRecognitionComplete);
+    };
+  }, []);
 
   // Add expense handler
   const handleAddExpense = () => {
@@ -84,9 +66,7 @@ const Dashboard = () => {
     <div className="container px-4 py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gastapp</h1>
-        <Button variant="outline" size="icon" onClick={handleVoiceRecognition}>
-          <Mic className={isRecording ? "text-red-500 animate-pulse" : ""} />
-        </Button>
+        <VoiceButton />
       </div>
 
       {/* Monthly summary */}

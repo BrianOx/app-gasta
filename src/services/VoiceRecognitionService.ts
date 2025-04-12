@@ -25,11 +25,19 @@ class VoiceRecognitionService {
       this.recognition.lang = 'es-ES';
       this.recognition.continuous = false;
       this.recognition.interimResults = false;
+      this.recognition.maxAlternatives = 3; // Obtener múltiples interpretaciones
+      
+      // Damos más tiempo antes de finalizar automáticamente
+      if ('speechRecognitionTimeout' in this.recognition) {
+        // @ts-ignore - Esta propiedad puede no estar en todos los navegadores
+        this.recognition.speechRecognitionTimeout = 10000; // 10 segundos
+      }
 
       this.recognition.onresult = this.handleRecognitionResult.bind(this);
       this.recognition.onerror = this.handleRecognitionError.bind(this);
       this.recognition.onend = () => {
         this.isListening = false;
+        console.log("Voice recognition ended");
       };
     }
   }
@@ -50,6 +58,7 @@ class VoiceRecognitionService {
     try {
       this.isListening = true;
       this.recognition.start();
+      console.log("Voice recognition started");
     } catch (error) {
       console.error("Error starting speech recognition:", error);
       this.isListening = false;
@@ -65,6 +74,7 @@ class VoiceRecognitionService {
     if (this.recognition && this.isListening) {
       this.recognition.stop();
       this.isListening = false;
+      console.log("Voice recognition stopped manually");
     }
   }
 
@@ -72,14 +82,22 @@ class VoiceRecognitionService {
     const transcript = event.results[0][0].transcript.toLowerCase();
     console.log("Recognized speech:", transcript);
     
+    // Registrar todas las alternativas para depuración
+    if (event.results[0].length > 1) {
+      for (let i = 1; i < event.results[0].length; i++) {
+        console.log(`Alternative ${i}:`, event.results[0][i].transcript.toLowerCase());
+      }
+    }
+    
     try {
-      const expenseData = this.parseExpenseFromVoice(transcript);
+      const expenseData = await this.parseExpenseFromVoice(transcript);
       if (expenseData) {
         await databaseService.addExpense(expenseData);
+        const category = await databaseService.getCategoryById(expenseData.categoryId);
         toast({
           title: "Gasto registrado",
-          description: `Se agregó ${expenseData.amount} por ${expenseData.description} en ${
-            (await databaseService.getCategoryById(expenseData.categoryId))?.name || "categoría"
+          description: `Se agregó ${expenseData.amount} por "${expenseData.description}" en ${
+            category?.name || "categoría"
           }`,
         });
       } else {
@@ -110,16 +128,53 @@ class VoiceRecognitionService {
     });
   }
 
-  private parseExpenseFromVoice(transcript: string): ExpenseInput | null {
-    // Patrones para extraer datos del comando de voz
+  private async parseExpenseFromVoice(transcript: string): Promise<ExpenseInput | null> {
+    console.log("Parsing expense from:", transcript);
+    
+    // Patrones mejorados para extraer datos del comando de voz
     const amountPattern = /(\d+(?:[.,]\d+)?)/;
-    const descriptionPattern = /(?:en|por)\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s)/i;
-    const categoryPattern = /(?:categoría|categoria)\s+([a-zÀ-ú\s]+)(?:,|\.|\s|$)/i;
+    
+    // Ampliamos patrones para descripción para capturar diferentes formas de hablar
+    const descriptionPatterns = [
+      /(?:en|por|de)\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s)/i,
+      /(?:gast[éoe]|compr[éoe])\s+(?:en|por)?\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s)/i,
+      /\d+(?:[.,]\d+)?\s+(?:pesos|€|euros|dólares|dollars)?\s+(?:en|de|por)?\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s)/i
+    ];
+    
+    // Ampliamos patrones para categoría
+    const categoryPatterns = [
+      /(?:categoría|categoria)\s+([a-zÀ-ú\s]+)(?:,|\.|\s|$)/i,
+      /(?:en la categoría|para la categoría|en categoría)\s+([a-zÀ-ú\s]+)(?:,|\.|\s|$)/i,
+      /(?:en|para)\s+([a-zÀ-ú\s]+)$/i
+    ];
   
     // Extracción de datos
     const amountMatch = transcript.match(amountPattern);
-    const descriptionMatch = transcript.match(descriptionPattern);
-    const categoryMatch = transcript.match(categoryPattern);
+    
+    // Intentar extraer descripción con múltiples patrones
+    let descriptionMatch = null;
+    for (const pattern of descriptionPatterns) {
+      const match = transcript.match(pattern);
+      if (match) {
+        descriptionMatch = match;
+        break;
+      }
+    }
+    
+    // Intentar extraer categoría con múltiples patrones
+    let categoryMatch = null;
+    for (const pattern of categoryPatterns) {
+      const match = transcript.match(pattern);
+      if (match) {
+        categoryMatch = match;
+        break;
+      }
+    }
+    
+    // Mostrar lo que encontramos para depuración
+    console.log("Amount match:", amountMatch?.[1]);
+    console.log("Description match:", descriptionMatch?.[1]);
+    console.log("Category match:", categoryMatch?.[1]);
   
     if (!amountMatch) {
       console.log("Could not extract amount from:", transcript);
@@ -134,23 +189,33 @@ class VoiceRecognitionService {
       ? descriptionMatch[1].trim() 
       : "Gasto sin descripción";
   
-    // Procesar la categoría
-    let categoryId = "7"; // Default to "Otros"
+    // Procesar la categoría - Hacemos esto asíncrono para mayor precisión
+    let categoryId = "7"; // Default a "Otros"
+    
     if (categoryMatch) {
-      // Buscar la categoría por nombre
-      const categoryName = categoryMatch[1].trim().toLowerCase();
-      databaseService.getCategories()
-        .then(categories => {
-          const category = categories.find(
-            c => c.name.toLowerCase() === categoryName
-          );
-          if (category) {
-            categoryId = category.id;
-          }
-        })
-        .catch(error => {
-          console.error("Error getting categories:", error);
-        });
+      // Buscar la categoría por nombre con mayor flexibilidad
+      const categoryNameInput = categoryMatch[1].trim().toLowerCase();
+      const categories = await databaseService.getCategories();
+      
+      // Primero buscamos coincidencia exacta
+      let matchedCategory = categories.find(
+        c => c.name.toLowerCase() === categoryNameInput
+      );
+      
+      // Si no hay coincidencia exacta, buscamos coincidencia parcial
+      if (!matchedCategory) {
+        matchedCategory = categories.find(
+          c => c.name.toLowerCase().includes(categoryNameInput) || 
+               categoryNameInput.includes(c.name.toLowerCase())
+        );
+      }
+      
+      if (matchedCategory) {
+        categoryId = matchedCategory.id;
+        console.log("Matched to category:", matchedCategory.name);
+      } else {
+        console.log("No category match found for:", categoryNameInput);
+      }
     }
   
     return {
