@@ -2,10 +2,17 @@
 import { toast } from "@/components/ui/use-toast";
 import { databaseService } from "./DatabaseService";
 import { ExpenseInput } from "@/models/Expense";
+import { categoryMatchingService } from "./CategoryMatchingService";
 
 class VoiceRecognitionService {
   private recognition: SpeechRecognition | null = null;
   private isListening: boolean = false;
+  // New property to track if we're waiting for category selection
+  private pendingExpense: ExpenseInput | null = null;
+  // New event for ambiguous category detection
+  private ambiguousCategoryEvent = new CustomEvent('voiceRecognitionAmbiguousCategory', {
+    detail: { pendingExpense: null, possibleCategories: [] }
+  });
 
   constructor() {
     this.setupRecognition();
@@ -92,14 +99,36 @@ class VoiceRecognitionService {
     try {
       const expenseData = await this.parseExpenseFromVoice(transcript);
       if (expenseData) {
-        await databaseService.addExpense(expenseData);
-        const category = await databaseService.getCategoryById(expenseData.categoryId);
-        toast({
-          title: "Gasto registrado",
-          description: `Se agregó ${expenseData.amount} por "${expenseData.description}" en ${
-            category?.name || "categoría"
-          }`,
-        });
+        this.pendingExpense = expenseData;
+        
+        // Check if we need to confirm category with user
+        const categoryMatch = await categoryMatchingService.findBestCategoryMatch(expenseData.description);
+        
+        // If confidence is high enough, automatically assign category
+        const CONFIDENCE_THRESHOLD = 0.6;
+        
+        if (categoryMatch.confidence >= CONFIDENCE_THRESHOLD || categoryMatch.possibleMatches.length <= 1) {
+          // Confidence is high enough to assign automatically
+          this.pendingExpense.categoryId = categoryMatch.categoryId;
+          
+          // Save expense
+          await this.saveExpense(this.pendingExpense);
+        } else {
+          // Multiple possible matches with similar confidence
+          console.log("Ambiguous category match:", categoryMatch);
+          // Create event with pending expense and possible categories
+          const ambiguousEvent = new CustomEvent('voiceRecognitionAmbiguousCategory', {
+            detail: {
+              pendingExpense: this.pendingExpense,
+              possibleMatches: categoryMatch.possibleMatches
+            }
+          });
+          
+          // Dispatch event to be handled by UI
+          window.dispatchEvent(ambiguousEvent);
+          
+          // Note: expense will be saved after user selects category, not here
+        }
       } else {
         toast({
           title: "No se pudo procesar",
@@ -115,6 +144,35 @@ class VoiceRecognitionService {
         variant: "destructive",
       });
     }
+  }
+
+  // Save expense and notify user
+  public async saveExpense(expense: ExpenseInput): Promise<void> {
+    await databaseService.addExpense(expense);
+    const category = await databaseService.getCategoryById(expense.categoryId);
+    toast({
+      title: "Gasto registrado",
+      description: `Se agregó ${expense.amount} por "${expense.description}" en ${
+        category?.name || "categoría"
+      }`,
+    });
+    
+    // Reset pending expense
+    this.pendingExpense = null;
+    
+    // Dispatch event to reload data
+    window.dispatchEvent(new CustomEvent('voiceRecognitionComplete'));
+  }
+  
+  // Method to complete expense with selected category
+  public async confirmCategoryForPendingExpense(categoryId: string): Promise<boolean> {
+    if (!this.pendingExpense) {
+      return false;
+    }
+    
+    this.pendingExpense.categoryId = categoryId;
+    await this.saveExpense(this.pendingExpense);
+    return true;
   }
 
   private handleRecognitionError(event: SpeechRecognitionErrorEvent) {
@@ -189,34 +247,8 @@ class VoiceRecognitionService {
       ? descriptionMatch[1].trim() 
       : "Gasto sin descripción";
   
-    // Procesar la categoría - Hacemos esto asíncrono para mayor precisión
+    // Procesar la categoría - no la buscamos todavía, lo haremos con el sistema de coincidencia
     let categoryId = "7"; // Default a "Otros"
-    
-    if (categoryMatch) {
-      // Buscar la categoría por nombre con mayor flexibilidad
-      const categoryNameInput = categoryMatch[1].trim().toLowerCase();
-      const categories = await databaseService.getCategories();
-      
-      // Primero buscamos coincidencia exacta
-      let matchedCategory = categories.find(
-        c => c.name.toLowerCase() === categoryNameInput
-      );
-      
-      // Si no hay coincidencia exacta, buscamos coincidencia parcial
-      if (!matchedCategory) {
-        matchedCategory = categories.find(
-          c => c.name.toLowerCase().includes(categoryNameInput) || 
-               categoryNameInput.includes(c.name.toLowerCase())
-        );
-      }
-      
-      if (matchedCategory) {
-        categoryId = matchedCategory.id;
-        console.log("Matched to category:", matchedCategory.name);
-      } else {
-        console.log("No category match found for:", categoryNameInput);
-      }
-    }
   
     return {
       amount,
