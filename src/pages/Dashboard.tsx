@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { CreditCard, TrendingUp, ArrowUpCircle, Mic } from "lucide-react";
+import { CreditCard, TrendingUp, ArrowUpCircle, Mic, Plus } from "lucide-react"; // Add Plus import
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";

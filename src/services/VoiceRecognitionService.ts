@@ -1,6 +1,7 @@
 
 import { toast } from "@/components/ui/use-toast";
 import { databaseService } from "./DatabaseService";
+import { ExpenseInput } from "@/models/Expense";
 
 class VoiceRecognitionService {
   private recognition: SpeechRecognition | null = null;
