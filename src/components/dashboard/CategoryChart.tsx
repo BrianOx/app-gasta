@@ -46,12 +46,12 @@ const CategoryChart = ({ expenses, categories }: CategoryChartProps) => {
                   labelLine={true}
                   label={({ name, percent, x, y, midAngle, outerRadius }) => {
                     const radius = outerRadius + 25;
-                    const x = x as number;
-                    const y = y as number;
+                    const xPos = x as number;
+                    const yPos = y as number;
                     return (
                       <text
-                        x={x}
-                        y={y}
+                        x={xPos}
+                        y={yPos}
                         textAnchor={midAngle > Math.PI ? 'end' : 'start'}
                         fill="#888"
                         fontSize="0.75rem"
