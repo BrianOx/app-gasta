@@ -5,6 +5,7 @@ import { voiceRecognitionService } from "@/services/VoiceRecognitionService";
 import { databaseService } from "@/services/DatabaseService";
 import CategorySelectionModal from "@/components/expenses/CategorySelectionModal";
 import { Category } from "@/models/Category";
+import { toast } from "@/components/ui/use-toast";
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -19,7 +20,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   // Handle voice recognition complete event
   useEffect(() => {
     const handleVoiceRecognitionComplete = () => {
-      console.log("Reloading data after voice recognition");
+      console.log("Voice recognition complete event received");
     };
     
     window.addEventListener('voiceRecognitionComplete', handleVoiceRecognitionComplete);
@@ -47,6 +48,12 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         
         // Show the selection modal
         setCategorySelectionOpen(true);
+        
+        // Also show a toast to make it more obvious
+        toast({
+          title: "Selecciona una categoría",
+          description: "Por favor selecciona la categoría correcta para este gasto",
+        });
       }
     };
     
@@ -73,6 +80,10 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   
   const handleCancelCategory = () => {
     setCategorySelectionOpen(false);
+    toast({
+      title: "Operación cancelada",
+      description: "El gasto no ha sido registrado",
+    });
   };
 
   return (

@@ -65,8 +65,10 @@ const Dashboard = () => {
   return (
     <div className="container px-4 py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Gastapp</h1>
-        <VoiceButton />
+        <h1 className="text-2xl font-bold text-foreground">Gastapp</h1>
+        <div className="z-10">
+          <VoiceButton />
+        </div>
       </div>
 
       {/* Monthly summary */}
@@ -76,21 +78,27 @@ const Dashboard = () => {
       />
 
       {/* Category Chart */}
-      <CategoryChart 
-        expenses={expenses}
-        categories={categories}
-      />
+      <div className="my-6 p-4 bg-card rounded-xl shadow-sm">
+        <h2 className="text-lg font-semibold mb-4 text-foreground">Gastos por categoría</h2>
+        <CategoryChart 
+          expenses={expenses}
+          categories={categories}
+        />
+      </div>
 
       {/* Recent Expenses */}
-      <RecentExpenses 
-        expenses={expenses}
-        categories={categories}
-      />
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold mb-4 text-foreground">Gastos recientes</h2>
+        <RecentExpenses 
+          expenses={expenses}
+          categories={categories}
+        />
+      </div>
 
       {/* Add expense button */}
-      <div className="fixed bottom-28 right-4">
+      <div className="fixed bottom-28 right-4 z-10">
         <Button 
-          className="rounded-full h-12 w-12 shadow-lg"
+          className="rounded-full h-14 w-14 shadow-lg"
           onClick={handleAddExpense}
         >
           <Plus className="h-6 w-6" />

@@ -44,7 +44,7 @@ const CategorySelectionModal: React.FC<CategorySelectionModalProps> = ({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="py-4">
+        <div className="py-4 max-h-[50vh] overflow-y-auto">
           <RadioGroup
             value={selectedCategoryId}
             onValueChange={onSelect}
@@ -53,17 +53,17 @@ const CategorySelectionModal: React.FC<CategorySelectionModalProps> = ({
             {categories.map((category) => (
               <div
                 key={category.id}
-                className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                className="flex items-center space-x-2 p-3 rounded-md hover:bg-accent cursor-pointer border border-border"
                 onClick={() => onSelect(category.id)}
               >
                 <RadioGroupItem value={category.id} id={`category-${category.id}`} />
                 <div
-                  className="w-4 h-4 rounded-full mr-2"
+                  className="w-5 h-5 rounded-full mr-2"
                   style={{ backgroundColor: category.color }}
                 />
                 <label
                   htmlFor={`category-${category.id}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 text-foreground"
                 >
                   {category.name}
                 </label>
@@ -72,7 +72,7 @@ const CategorySelectionModal: React.FC<CategorySelectionModalProps> = ({
           </RadioGroup>
         </div>
 
-        <AlertDialogFooter>
+        <AlertDialogFooter className="gap-2">
           <AlertDialogCancel onClick={onCancel}>Cancelar</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm}>Confirmar</AlertDialogAction>
         </AlertDialogFooter>

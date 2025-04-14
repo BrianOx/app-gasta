@@ -32,12 +32,12 @@ class VoiceRecognitionService {
       this.recognition.lang = 'es-ES';
       this.recognition.continuous = false;
       this.recognition.interimResults = false;
-      this.recognition.maxAlternatives = 3; // Obtener múltiples interpretaciones
+      this.recognition.maxAlternatives = 5; // Obtener más interpretaciones
       
       // Damos más tiempo antes de finalizar automáticamente
       if ('speechRecognitionTimeout' in this.recognition) {
         // @ts-ignore - Esta propiedad puede no estar en todos los navegadores
-        this.recognition.speechRecognitionTimeout = 10000; // 10 segundos
+        this.recognition.speechRecognitionTimeout = 15000; // 15 segundos
       }
 
       this.recognition.onresult = this.handleRecognitionResult.bind(this);
@@ -45,6 +45,15 @@ class VoiceRecognitionService {
       this.recognition.onend = () => {
         this.state.isListening = false;
         console.log("Voice recognition ended");
+        
+        // Si terminó pero no se procesó ningún resultado, notificamos
+        if (this.state.pendingExpense === null) {
+          toast({
+            title: "No se detectó audio",
+            description: "No pudimos escuchar lo que dijiste. Intenta de nuevo.",
+            variant: "destructive",
+          });
+        }
       };
     }
   }
@@ -63,9 +72,16 @@ class VoiceRecognitionService {
     }
 
     try {
+      // Limpiar estado anterior
+      this.state.pendingExpense = null;
       this.state.isListening = true;
       this.recognition.start();
       console.log("Voice recognition started");
+      
+      toast({
+        title: "Escuchando...",
+        description: "Dime tu gasto. Por ejemplo: '1500 en comida'",
+      });
     } catch (error) {
       console.error("Error starting speech recognition:", error);
       this.state.isListening = false;
@@ -105,7 +121,7 @@ class VoiceRecognitionService {
         const categoryMatch = await categoryMatchingService.findBestCategoryMatch(expenseData.description);
         
         // If confidence is high enough, automatically assign category
-        const CONFIDENCE_THRESHOLD = 0.6;
+        const CONFIDENCE_THRESHOLD = 0.5; // Reducimos un poco para ser más permisivos
         
         if (categoryMatch.confidence >= CONFIDENCE_THRESHOLD || categoryMatch.possibleMatches.length <= 1) {
           // Confidence is high enough to assign automatically
@@ -152,7 +168,7 @@ class VoiceRecognitionService {
     toast({
       title: "Gasto registrado",
       description: `Se agregó ${expense.amount} por "${expense.description}" en ${
-        category?.name || "categoría"
+        category?.name || "categoría desconocida"
       }`,
     });
     
@@ -178,9 +194,38 @@ class VoiceRecognitionService {
     console.error("Speech recognition error:", event.error);
     this.state.isListening = false;
     
+    let errorMessage = "Error desconocido";
+    
+    switch (event.error) {
+      case 'no-speech':
+        errorMessage = "No se detectó ninguna voz";
+        break;
+      case 'aborted':
+        errorMessage = "Reconocimiento cancelado";
+        break;
+      case 'audio-capture':
+        errorMessage = "No se pudo acceder al micrófono";
+        break;
+      case 'network':
+        errorMessage = "Error de red al procesar la voz";
+        break;
+      case 'not-allowed':
+        errorMessage = "Permiso de micrófono denegado";
+        break;
+      case 'service-not-allowed':
+        errorMessage = "Servicio de reconocimiento no disponible";
+        break;
+      case 'bad-grammar':
+        errorMessage = "Problema con la gramática de reconocimiento";
+        break;
+      case 'language-not-supported':
+        errorMessage = "Idioma no soportado";
+        break;
+    }
+    
     toast({
       title: "Error en reconocimiento",
-      description: `Error: ${event.error}. Intenta nuevamente.`,
+      description: errorMessage + ". Intenta nuevamente.",
       variant: "destructive",
     });
   }

@@ -13,9 +13,10 @@ class VoiceParser {
     
     // Ampliamos patrones para descripción para capturar diferentes formas de hablar
     const descriptionPatterns = [
-      /(?:en|por|de)\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s)/i,
-      /(?:gast[éoe]|compr[éoe])\s+(?:en|por)?\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s)/i,
-      /\d+(?:[.,]\d+)?\s+(?:pesos|€|euros|dólares|dollars)?\s+(?:en|de|por)?\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s)/i
+      /(?:en|por|de)\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s|\s\d)/i,
+      /(?:gast[éoe]|compr[éoe])\s+(?:en|por)?\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s|\s\d)/i,
+      /\d+(?:[.,]\d+)?\s+(?:pesos|€|euros|dólares|dollars)?\s+(?:en|de|por)?\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s|\s\d)/i,
+      /(?:por|en|de)\s+([a-zÀ-ú\s]+)$/i
     ];
     
     // Ampliamos patrones para categoría
@@ -62,9 +63,16 @@ class VoiceParser {
     const amount = parseFloat(amountMatch[1].replace(',', '.'));
   
     // Procesar la descripción
-    const description = descriptionMatch 
-      ? descriptionMatch[1].trim() 
-      : "Gasto sin descripción";
+    let description = "Gasto sin descripción";
+    if (descriptionMatch && descriptionMatch[1]) {
+      description = descriptionMatch[1].trim();
+    } else {
+      // Si no tenemos descripción, intentemos usar el resto del texto después del monto
+      const textAfterAmount = transcript.substring(transcript.indexOf(amountMatch[0]) + amountMatch[0].length);
+      if (textAfterAmount && textAfterAmount.trim().length > 3) {
+        description = textAfterAmount.trim();
+      }
+    }
   
     // Procesar la categoría - no la buscamos todavía, lo haremos con el sistema de coincidencia
     let categoryId = "7"; // Default a "Otros"

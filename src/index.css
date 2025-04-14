@@ -80,7 +80,7 @@
 
 /* Custom styles for Gastapp */
 .expense-card {
-  @apply relative p-4 rounded-xl transition-all duration-200 hover:shadow-md;
+  @apply relative p-4 rounded-xl transition-all duration-200 hover:shadow-md border border-border;
 }
 
 .category-badge {
@@ -97,4 +97,20 @@
 
 .limit-progress {
   @apply h-full rounded-full transition-all duration-300;
+}
+
+/* Animations for voice recognition */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }

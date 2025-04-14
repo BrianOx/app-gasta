@@ -78,17 +78,19 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({ className }) => {
       size="icon" 
       className={cn(
         "voice-button relative",
-        isRecording && "animate-pulse",
+        isRecording && "animate-pulse bg-red-500 hover:bg-red-600",
         className
       )}
       onClick={isRecording ? stopVoiceRecognition : startVoiceRecognition}
     >
       {isRecording ? (
         <>
-          <div className="absolute inset-0 rounded-full bg-primary/30 animate-pulse-ring"></div>
-          <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-primary text-white px-2 py-1 rounded-full text-xs">
-            {countdown}s
-          </div>
+          <div className="absolute inset-0 rounded-full bg-red-400/30 animate-pulse-ring"></div>
+          {countdown !== null && (
+            <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-background border border-border shadow-md text-foreground px-2 py-1 rounded-full text-xs font-medium">
+              {countdown}s
+            </div>
+          )}
           <Mic className="h-6 w-6" />
         </>
       ) : (
