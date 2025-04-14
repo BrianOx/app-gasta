@@ -16,27 +16,16 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   const [possibleCategories, setPossibleCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("7"); // Default to "Otros"
   
-  // Configurar un evento personalizado para recargar datos cuando se completa el reconocimiento de voz
+  // Handle voice recognition complete event
   useEffect(() => {
-    // Sobrescribe el método handleRecognitionResult para enviar un evento cuando termina
-    const originalHandleResult = voiceRecognitionService["handleRecognitionResult"];
+    const handleVoiceRecognitionComplete = () => {
+      console.log("Reloading data after voice recognition");
+    };
     
-    if (originalHandleResult) {
-      // @ts-ignore - Accedemos a método privado para sobrescribirlo
-      voiceRecognitionService["handleRecognitionResult"] = async function(...args: any[]) {
-        await originalHandleResult.apply(this, args);
-        
-        // Dispatchar evento personalizado cuando se completa el reconocimiento
-        window.dispatchEvent(new CustomEvent('voiceRecognitionComplete'));
-      };
-    }
+    window.addEventListener('voiceRecognitionComplete', handleVoiceRecognitionComplete);
     
     return () => {
-      // Restaurar el método original cuando se desmonta
-      if (originalHandleResult) {
-        // @ts-ignore - Restauramos el método original
-        voiceRecognitionService["handleRecognitionResult"] = originalHandleResult;
-      }
+      window.removeEventListener('voiceRecognitionComplete', handleVoiceRecognitionComplete);
     };
   }, []);
   
