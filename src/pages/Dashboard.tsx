@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,6 @@ const Dashboard = () => {
   const [monthlyTotal, setMonthlyTotal] = useState(0);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   
-  // Function to load all data
   const loadData = async () => {
     try {
       const [loadedExpenses, loadedCategories, loadedSettings, currentMonthTotal] = await Promise.all([
@@ -38,12 +36,10 @@ const Dashboard = () => {
     }
   };
 
-  // Load data on component mount
   useEffect(() => {
     loadData();
   }, []);
 
-  // Configurar un evento personalizado para recargar datos cuando se completa el reconocimiento de voz
   useEffect(() => {
     const handleVoiceRecognitionComplete = () => {
       console.log("Reloading data after voice recognition");
@@ -57,7 +53,6 @@ const Dashboard = () => {
     };
   }, []);
 
-  // Add expense handler
   const handleAddExpense = () => {
     setIsAddExpenseOpen(true);
   };
@@ -71,31 +66,23 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Monthly summary */}
       <MonthlyOverview 
         monthlyTotal={monthlyTotal}
         settings={settings}
       />
 
-      {/* Category Chart */}
       <div className="my-6 p-4 bg-card rounded-xl shadow-sm">
-        <h2 className="text-lg font-semibold mb-4 text-foreground">Gastos por categoría</h2>
         <CategoryChart 
           expenses={expenses}
           categories={categories}
         />
       </div>
 
-      {/* Recent Expenses */}
-      <div className="mt-6">
-        <h2 className="text-lg font-semibold mb-4 text-foreground">Gastos recientes</h2>
-        <RecentExpenses 
-          expenses={expenses}
-          categories={categories}
-        />
-      </div>
+      <RecentExpenses 
+        expenses={expenses}
+        categories={categories}
+      />
 
-      {/* Add expense button */}
       <div className="fixed bottom-28 right-4 z-10">
         <Button 
           className="rounded-full h-14 w-14 shadow-lg"
@@ -105,7 +92,6 @@ const Dashboard = () => {
         </Button>
       </div>
 
-      {/* Add expense dialog */}
       <AddExpenseDialog 
         open={isAddExpenseOpen} 
         onOpenChange={setIsAddExpenseOpen}

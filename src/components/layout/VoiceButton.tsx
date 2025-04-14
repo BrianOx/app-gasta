@@ -77,7 +77,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({ className }) => {
       variant="default" 
       size="icon" 
       className={cn(
-        "voice-button relative",
+        "relative w-16 h-16 rounded-full flex items-center justify-center", // Explicitly set dimensions
         isRecording && "animate-pulse bg-red-500 hover:bg-red-600",
         className
       )}

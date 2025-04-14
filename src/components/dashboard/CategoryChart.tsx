@@ -1,6 +1,6 @@
 
 import React from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Label } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowUpCircle } from "lucide-react";
@@ -32,7 +32,7 @@ const CategoryChart = ({ expenses, categories }: CategoryChartProps) => {
           <CardTitle className="text-lg">Gastos por categoría</CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center">
-          <div className="h-[200px] w-full">
+          <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -43,8 +43,23 @@ const CategoryChart = ({ expenses, categories }: CategoryChartProps) => {
                   outerRadius={80}
                   paddingAngle={2}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
+                  labelLine={true}
+                  label={({ name, percent, x, y, midAngle, outerRadius }) => {
+                    const radius = outerRadius + 25;
+                    const x = x as number;
+                    const y = y as number;
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        textAnchor={midAngle > Math.PI ? 'end' : 'start'}
+                        fill="#888"
+                        fontSize="0.75rem"
+                      >
+                        {`${name} ${(percent * 100).toFixed(0)}%`}
+                      </text>
+                    );
+                  }}
                 >
                   {expensesByCategory.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
