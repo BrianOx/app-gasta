@@ -1,29 +1,41 @@
 
 import { ExpenseInput } from "@/models/Expense";
+import { aiVoiceProcessor } from "./AIVoiceProcessor";
 
 class VoiceParser {
   /**
    * Parse spoken text to extract expense information
+   * Utiliza el procesador de IA para mejor comprensión
    */
-  public parseExpenseFromVoice(transcript: string): ExpenseInput | null {
+  public async parseExpenseFromVoice(transcript: string): Promise<ExpenseInput | null> {
     console.log("Parsing expense from:", transcript);
     
-    // Patrones mejorados para extraer datos del comando de voz
+    // Utilizamos el procesador de IA para analizar el comando
+    const { expense, confidence } = await aiVoiceProcessor.processVoiceCommand(transcript);
+    
+    // Si el procesador de IA encontró un gasto válido, lo devolvemos
+    if (expense && expense.amount > 0) {
+      console.log("AI detected expense:", expense, "with confidence:", confidence);
+      return expense;
+    }
+    
+    // Fallback al método original si la IA no encontró un gasto válido
+    return this.fallbackParsing(transcript);
+  }
+  
+  /**
+   * Método de respaldo que utiliza la lógica original
+   */
+  private fallbackParsing(transcript: string): ExpenseInput | null {
+    // Patrones para extracción de datos
     const amountPattern = /(\d+(?:[.,]\d+)?)/;
     
-    // Ampliamos patrones para descripción para capturar diferentes formas de hablar
+    // Patrones para descripción
     const descriptionPatterns = [
       /(?:en|por|de)\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s|\s\d)/i,
       /(?:gast[éoe]|compr[éoe])\s+(?:en|por)?\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s|\s\d)/i,
       /\d+(?:[.,]\d+)?\s+(?:pesos|€|euros|dólares|dollars)?\s+(?:en|de|por)?\s+([a-zÀ-ú\s]+?)(?:,|\sen\s|$|\scategoría\s|\spara\s|\s\d)/i,
       /(?:por|en|de)\s+([a-zÀ-ú\s]+)$/i
-    ];
-    
-    // Ampliamos patrones para categoría
-    const categoryPatterns = [
-      /(?:categoría|categoria)\s+([a-zÀ-ú\s]+)(?:,|\.|\s|$)/i,
-      /(?:en la categoría|para la categoría|en categoría)\s+([a-zÀ-ú\s]+)(?:,|\.|\s|$)/i,
-      /(?:en|para)\s+([a-zÀ-ú\s]+)$/i
     ];
   
     // Extracción de datos
@@ -39,20 +51,9 @@ class VoiceParser {
       }
     }
     
-    // Intentar extraer categoría con múltiples patrones
-    let categoryMatch = null;
-    for (const pattern of categoryPatterns) {
-      const match = transcript.match(pattern);
-      if (match) {
-        categoryMatch = match;
-        break;
-      }
-    }
-    
     // Mostrar lo que encontramos para depuración
-    console.log("Amount match:", amountMatch?.[1]);
-    console.log("Description match:", descriptionMatch?.[1]);
-    console.log("Category match:", categoryMatch?.[1]);
+    console.log("Fallback Amount match:", amountMatch?.[1]);
+    console.log("Fallback Description match:", descriptionMatch?.[1]);
   
     if (!amountMatch) {
       console.log("Could not extract amount from:", transcript);
@@ -74,7 +75,7 @@ class VoiceParser {
       }
     }
   
-    // Procesar la categoría - no la buscamos todavía, lo haremos con el sistema de coincidencia
+    // Categoría por defecto
     let categoryId = "7"; // Default a "Otros"
   
     return {

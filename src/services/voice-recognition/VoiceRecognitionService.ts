@@ -106,7 +106,7 @@ class VoiceRecognitionService {
     const transcript = event.results[0][0].transcript.toLowerCase();
     console.log("Recognized speech:", transcript);
     
-    // Registrar todas las alternativas para depuración
+    // Registrar todas las alternativas para depuración y mejora de IA
     if (event.results[0].length > 1) {
       for (let i = 1; i < event.results[0].length; i++) {
         console.log(`Alternative ${i}:`, event.results[0][i].transcript.toLowerCase());
@@ -118,29 +118,33 @@ class VoiceRecognitionService {
       if (expenseData) {
         this.state.pendingExpense = expenseData;
         
-        // Check if we need to confirm category with user
-        const categoryMatch = await categoryMatchingService.findBestCategoryMatch(expenseData.description);
-        
-        // If confidence is high enough, automatically assign category
-        const CONFIDENCE_THRESHOLD = 0.5; // Reducimos un poco para ser más permisivos
-        
-        if (categoryMatch.confidence >= CONFIDENCE_THRESHOLD || categoryMatch.possibleMatches.length <= 1) {
-          // Confidence is high enough to assign automatically
-          this.state.pendingExpense.categoryId = categoryMatch.categoryId;
-          
-          // Save expense
+        // Si ya tenemos una categoría asignada por la IA
+        if (expenseData.categoryId && expenseData.categoryId !== "7") {
+          // Guardar gasto directamente si la IA ya asignó una categoría con alta confianza
           await this.saveExpense(this.state.pendingExpense);
         } else {
-          // Multiple possible matches with similar confidence
-          console.log("Ambiguous category match:", categoryMatch);
+          // Si no, usar el sistema de coincidencia para encontrar la mejor categoría
+          const categoryMatch = await categoryMatchingService.findBestCategoryMatch(expenseData.description);
           
-          // Dispatch event with pending expense and possible categories
-          voiceEvents.dispatchAmbiguousCategoryEvent(
-            this.state.pendingExpense,
-            categoryMatch.possibleMatches
-          );
+          // Si la confianza es suficiente, asignar automáticamente
+          const CONFIDENCE_THRESHOLD = 0.5;
           
-          // Note: expense will be saved after user selects category, not here
+          if (categoryMatch.confidence >= CONFIDENCE_THRESHOLD || categoryMatch.possibleMatches.length <= 1) {
+            // La confianza es suficiente para asignar automáticamente
+            this.state.pendingExpense.categoryId = categoryMatch.categoryId;
+            
+            // Guardar gasto
+            await this.saveExpense(this.state.pendingExpense);
+          } else {
+            // Múltiples coincidencias posibles con confianza similar
+            console.log("Ambiguous category match:", categoryMatch);
+            
+            // Enviar evento con gasto pendiente y categorías posibles
+            voiceEvents.dispatchAmbiguousCategoryEvent(
+              this.state.pendingExpense,
+              categoryMatch.possibleMatches
+            );
+          }
         }
       } else {
         toast({
@@ -158,7 +162,7 @@ class VoiceRecognitionService {
       });
     }
     
-    // Notify that recognition is complete
+    // Notificar que el reconocimiento está completo
     voiceEvents.dispatchRecognitionComplete();
   }
 
