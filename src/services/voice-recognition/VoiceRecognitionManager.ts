@@ -1,4 +1,3 @@
-
 import { toast } from "@/components/ui/use-toast";
 import { voiceParser } from "./VoiceParser";
 import { voiceEvents } from "./VoiceEvents";
@@ -162,11 +161,8 @@ class VoiceRecognitionManager {
   public async findPossibleCategories(description: string): Promise<CategoryMatch[]> {
     try {
       const categories = await databaseService.getCategories();
-      const matches = await categoryMatchingService.findMatchingCategories(description, categories);
-      return matches.map(match => ({
-        category: match.category,
-        confidence: match.confidence
-      }));
+      const result = await categoryMatchingService.findBestCategoryMatch(description);
+      return result.possibleMatches;
     } catch (error) {
       console.error("Error finding possible categories:", error);
       return [];
