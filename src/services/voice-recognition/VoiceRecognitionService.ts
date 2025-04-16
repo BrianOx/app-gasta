@@ -46,8 +46,9 @@ class VoiceRecognitionService {
         this.state.isListening = false;
         console.log("Voice recognition ended");
         
-        // Si terminó pero no se procesó ningún resultado, notificamos
-        if (this.state.pendingExpense === null) {
+        // Solo mostramos la notificación de error si no se procesó ningún resultado
+        // y además no se canceló manualmente
+        if (this.state.pendingExpense === null && this.state.isListening) {
           toast({
             title: "No se detectó audio",
             description: "No pudimos escuchar lo que dijiste. Intenta de nuevo.",
