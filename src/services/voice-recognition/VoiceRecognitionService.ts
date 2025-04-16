@@ -26,6 +26,14 @@ class VoiceRecognitionService {
   public isRecognitionSupported(): boolean {
     return audioPermissionManager.isRecognitionSupported();
   }
+
+  /**
+   * Confirms the selected category for a pending expense
+   * @param categoryId The ID of the category to use for the pending expense
+   */
+  public async confirmCategoryForPendingExpense(categoryId: string): Promise<void> {
+    return voiceRecognitionManager.confirmCategoryForPendingExpense(categoryId);
+  }
 }
 
 export const voiceRecognitionService = new VoiceRecognitionService();

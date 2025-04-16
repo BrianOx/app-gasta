@@ -1,13 +1,18 @@
+
 import { toast } from "@/components/ui/use-toast";
 import { voiceParser } from "./VoiceParser";
 import { voiceEvents } from "./VoiceEvents";
 import { hotwordDetector } from "./HotwordDetector";
+import { databaseService } from "@/services/DatabaseService";
+import { categoryMatchingService } from "@/services/CategoryMatchingService";
+import { CategoryMatch } from "./types";
+import { ExpenseInput } from "@/models/Expense";
 
 class VoiceRecognitionManager {
   private recognition: SpeechRecognition | null = null;
   private state = {
     isListening: false,
-    pendingExpense: null
+    pendingExpense: null as ExpenseInput | null
   };
 
   constructor() {
@@ -77,7 +82,7 @@ class VoiceRecognitionManager {
     }
   }
 
-  private async handleExpenseData(expenseData: any) {
+  private async handleExpenseData(expenseData: ExpenseInput) {
     if (expenseData.categoryId && expenseData.categoryId !== "7") {
       await this.saveExpense(expenseData);
     } else {
@@ -125,6 +130,67 @@ class VoiceRecognitionManager {
       description: errorMessage + ". Intenta nuevamente.",
       variant: "destructive",
     });
+  }
+
+  /**
+   * Saves an expense to the database
+   */
+  public async saveExpense(expense: ExpenseInput): Promise<void> {
+    try {
+      await databaseService.addExpense(expense);
+      this.state.pendingExpense = null;
+      
+      toast({
+        title: "Gasto registrado",
+        description: `${expense.amount} en ${expense.description}`,
+      });
+      
+      voiceEvents.dispatchRecognitionComplete();
+    } catch (error) {
+      console.error("Error saving expense:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el gasto.",
+        variant: "destructive",
+      });
+    }
+  }
+  
+  /**
+   * Finds possible categories for a description
+   */
+  public async findPossibleCategories(description: string): Promise<CategoryMatch[]> {
+    try {
+      const categories = await databaseService.getCategories();
+      const matches = await categoryMatchingService.findMatchingCategories(description, categories);
+      return matches.map(match => ({
+        category: match.category,
+        confidence: match.confidence
+      }));
+    } catch (error) {
+      console.error("Error finding possible categories:", error);
+      return [];
+    }
+  }
+  
+  /**
+   * Confirms the selected category for a pending expense
+   */
+  public async confirmCategoryForPendingExpense(categoryId: string): Promise<void> {
+    if (this.state.pendingExpense) {
+      const updatedExpense = {
+        ...this.state.pendingExpense,
+        categoryId
+      };
+      
+      await this.saveExpense(updatedExpense);
+    } else {
+      toast({
+        title: "Error",
+        description: "No hay un gasto pendiente para categorizar.",
+        variant: "destructive",
+      });
+    }
   }
 
   public startExpenseRecognition(): void {
